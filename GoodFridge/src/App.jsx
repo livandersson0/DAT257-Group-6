@@ -156,6 +156,7 @@ return (
 function FridgeTab({ products, onDelete }) {
 const [search, setSearch]   = useState('')
 const [filter, setFilter]   = useState('all')
+const [sort, setSort] = useState('expiry')
 
 const FILTERS = [
 { key: 'all',     label: 'Alla'       },
@@ -167,7 +168,12 @@ const FILTERS = [
 const visible = products
 .filter(p => filter === 'all' || p.location === filter)
 .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-.sort((a, b) => daysLeft(a.date) - daysLeft(b.date))
+.sort((a, b) => {
+  if (sort === 'expiry') return daysLeft(a.date) - daysLeft(b.date)
+  if (sort === 'name')   return a.name.localeCompare(b.name)
+  if (sort === 'location') return a.location.localeCompare(b.location)
+  return 0
+})
 
 return (
 <div>
@@ -179,6 +185,12 @@ value={search}
 onChange={e => setSearch(e.target.value)}
 className="search-input"
 />
+<select value={sort} onChange={e => setSort(e.target.value)} className="filter-btn">
+          <option value="expiry">Utgångsdatum</option>
+          <option value="name">Namn (A–Ö)</option>
+          <option value="location">Plats</option>
+        </select>
+      
 </div>
 <div className="filter-row">
 {FILTERS.map(f => (
@@ -190,6 +202,9 @@ onClick={() => setFilter(f.key)}
 {f.label}
 </button>
 ))}
+<button className="filter-btn" onClick={() => { setSort('expiry'); setSearch(''); setFilter('all') }}>
+  Återställ
+</button>
 </div>
 <div className="product-list">
 {visible.length === 0 ? (
