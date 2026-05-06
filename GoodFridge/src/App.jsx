@@ -106,6 +106,8 @@ const statTotal  = products.length
 const statUrgent = products.filter(p => { const dl = daysLeft(p.date); return dl >= 0 && dl <= 2 }).length
 const statOk     = products.filter(p => daysLeft(p.date) > 5).length
 
+const statExpired = products.filter(p => daysLeft(p.date) < 0).length
+
 return (
 <div>
 <h2 className="section-title">Nästa 7 dagarna</h2>
@@ -139,6 +141,10 @@ return (
       <div className="stat-label">i bra skick</div>
     </div>
   </div>
+  <div className="stat-card">
+  <div className="stat-num" style={{ color: 'var(--red-400)' }}>{statExpired}</div>
+  <div className="stat-label">Slängda varor</div>
+</div>
 
   <h2 className="section-title">Utgår snart</h2>
   <div className="product-list">
@@ -148,6 +154,7 @@ return (
       urgentList.map(p => <ProductItem key={p.id} product={p} />)
     )}
   </div>
+  
 </div>
 
 )
@@ -306,7 +313,16 @@ function addProduct({ name, date, location }) {
 setProducts(prev => [{ id: nextId, name, date, location }, ...prev])
 setNextId(n => n + 1)
 }
+const [confirmDelete, setConfirmDelete] = useState(null)
 
+function handleDeleteRequest(id) {
+  setConfirmDelete(id)
+}
+
+function handleDeleteConfirm(reason) {
+  deleteProduct(confirmDelete)
+  setConfirmDelete(null)
+}
 function deleteProduct(id) {
 setProducts(prev => prev.filter(p => p.id !== id))
 }
