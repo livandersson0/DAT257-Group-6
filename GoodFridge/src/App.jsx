@@ -400,6 +400,16 @@ export default function App() {
     setNotifications(expiring)
   }, [products, notifyDaysBefore, dismissedIds])
 
+  function handleDeleteRequest(id) {
+    setConfirmDelete(id)
+  }
+
+  function handleDeleteConfirm(reason) {
+    deleteProduct(confirmDelete)
+    setConfirmDelete(null)
+  }
+
+
   function addProduct({ name, date, location, image }) {
     setProducts(prev => [{ id: nextId, name, date, location, image }, ...prev])
     setNextId(n => n + 1)
