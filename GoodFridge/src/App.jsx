@@ -292,6 +292,55 @@ onChange={e => setDate(e.target.value)}
 )
 }
 
+function NotificationBanner({ notifications, onDismiss }) {
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3')
+      audio.play().catch(() => {})
+    }
+  }, [notifications.length])
+
+  if (notifications.length === 0) return null
+
+  return (
+    <div className="notif-banner">
+      {notifications.map(p => (
+        <div key={p.id} className="notif-item">
+          <span>
+            🔔 <strong>{p.name}</strong> går ut {formatDate(p.date)} ({daysLeft(p.date) === 0 ? 'idag' : `om ${daysLeft(p.date)} dag${daysLeft(p.date) === 1 ? '' : 'ar'}`})
+          </span>
+          <button onClick={() => onDismiss(p.id)}>✕</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SettingsTab({ notifyDaysBefore, setNotifyDaysBefore }) {
+  return (
+    <div>
+      <h2 className="section-title">Notifikationsinställningar</h2>
+      <div className="add-form">
+        <label className="form-label">Notifiera mig när en vara går ut inom:</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          {[1, 2, 3, 5, 7].map(d => (
+            <button
+              key={d}
+              className={`filter-btn${notifyDaysBefore === d ? ' active' : ''}`}
+              onClick={() => setNotifyDaysBefore(d)}
+            >
+              {d} dag{d === 1 ? '' : 'ar'}
+            </button>
+          ))}
+        </div>
+        <p style={{ marginTop: 16, fontSize: 13, color: 'var(--text-2)' }}>
+          Du får notis om varor som går ut inom <strong>{notifyDaysBefore} dagar</strong>.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ── main app ───────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -312,10 +361,32 @@ return 8
 })
 const [tab, setTab] = useState('overview')
 
+// ── notification states ──────────────────────────────────────────────
+
+const [notifyDaysBefore, setNotifyDaysBefore] = useState(() => {
+  return Number(localStorage.getItem('gf-notify-days') || '2')
+})
+const [notifications, setNotifications] = useState([])
+const [dismissedIds, setDismissedIds] = useState(() => {
+  try { return JSON.parse(localStorage.getItem('gf-dismissed') || '[]') }
+  catch { return [] }
+})
+
 useEffect(() => {
 localStorage.setItem('gf-products', JSON.stringify(products))
 localStorage.setItem('gf-next-id', String(nextId))
 }, [products, nextId])
+
+  // ── kolla vilka varor som snart går ut ───────────────────────────────
+  useEffect(() => {
+    localStorage.setItem('gf-notify-days', String(notifyDaysBefore))
+    const expiring = products.filter(p => {
+      const dl = daysLeft(p.date)
+      return dl >= 0 && dl <= notifyDaysBefore && !dismissedIds.includes(p.id)
+    })
+    setNotifications(expiring)
+  }, [products, notifyDaysBefore, dismissedIds])
+
 
 function addProduct({ name, date, location }) {
 setProducts(prev => [{ id: nextId, name, date, location }, ...prev])
@@ -326,10 +397,18 @@ function deleteProduct(id) {
 setProducts(prev => prev.filter(p => p.id !== id))
 }
 
+  // ── avfärda notis ────────────────────────────────────────────────────
+  function dismissNotification(id) {
+    const updated = [...dismissedIds, id]
+    setDismissedIds(updated)
+    localStorage.setItem('gf-dismissed', JSON.stringify(updated))
+  }
+
 const TABS = [
 { key: 'overview', label: 'Översikt'   },
 { key: 'fridge',   label: 'Mina varor' },
 { key: 'add',      label: '+ Lägg till'},
+{ key: 'settings',  label: '⚙️ Inställningar' }
 ]
 
 return (
@@ -352,10 +431,13 @@ onClick={() => setTab(t.key)}
 </nav>
 </header>
 
+<NotificationBanner notifications={notifications} onDismiss={dismissNotification} />
+
   <main className="app-body">
     {tab === 'overview' && <OverviewTab products={products} />}
     {tab === 'fridge'   && <FridgeTab   products={products} onDelete={deleteProduct} />}
     {tab === 'add'      && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={deleteProduct} />}
+    {tab === 'settings' && <SettingsTab notifyDaysBefore={notifyDaysBefore} setNotifyDaysBefore={setNotifyDaysBefore} />}
   </main>
 </div>
 
