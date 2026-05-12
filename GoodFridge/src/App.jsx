@@ -36,10 +36,10 @@ return { fridge: '🧊', freezer: '❄️', pantry: '🗄️' }[location] || '�
 }
 
 function getIconBg(days) {
-if (days < 0) return 'var(–bg-muted)'
-if (days <= 2) return 'var(–red-50)'
-if (days <= 5) return 'var(–amber-50)'
-return 'var(–green-50)'
+if (days < 0) return 'var(--bg-muted)'
+if (days <= 2) return 'var(--red-50)'
+if (days <= 5) return 'var(--amber-50)'
+return 'var(--green-50)'
 }
 
 function locationLabel(loc) {
@@ -58,9 +58,67 @@ const SAMPLE_PRODUCTS = [
 
 // ── sub-components ─────────────────────────────────────────────────────────
 
-function ProductItem({ product, onDelete }) {
+function ProductItem({ product, onDelete, onEdit }) {
 const days = daysLeft(product.date)
 const badge = getBadge(days)
+
+const [isEditing, setIsEditing] = useState(false)
+const [editName, setEditName] = useState(product.name)
+const [editDate, setEditDate] = useState(product.date)
+const [editLocation, setEditLocation] = useState(product.location)
+
+function handleSave() {
+  if (!editName.trim() || !editDate) return
+  onEdit(product.id, { name: editName.trim(), date: editDate, location: editLocation })
+  setIsEditing(false)
+}
+
+function handleCancel() {
+  setEditName(product.name)
+  setEditDate(product.date)
+  setEditLocation(product.location)
+  setIsEditing(false)
+}
+
+if (isEditing) {
+  return (
+    <div className="product-item product-item--editing">
+      <div className="product-icon" style={{ background: getIconBg(days) }}>
+        {getEmoji(editLocation)}
+      </div>
+      <div className="product-edit-fields">
+        <input
+          type="text"
+          value={editName}
+          onChange={e => setEditName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') handleCancel() }}
+          className="edit-input"
+          autoFocus
+        />
+        <input
+          type="date"
+          value={editDate}
+          onChange={e => setEditDate(e.target.value)}
+          className="edit-input"
+        />
+        <select
+          value={editLocation}
+          onChange={e => setEditLocation(e.target.value)}
+          className="edit-input"
+        >
+          <option value="fridge">🧊 Kyl</option>
+          <option value="freezer">❄️ Frys</option>
+          <option value="pantry">🗄️ Skafferi</option>
+        </select>
+      </div>
+      <div className="edit-actions">
+        <button className="save-btn" onClick={handleSave} title="Spara">✓</button>
+        <button className="cancel-btn" onClick={handleCancel} title="Avbryt">✕</button>
+      </div>
+    </div>
+  )
+}
+
 return (
 <div className="product-item">
 <div className="product-icon" style={{ background: getIconBg(days) }}>
@@ -74,6 +132,11 @@ return (
 </div>
 </div>
 <span className={`badge ${badge.cls}`}>{badge.text}</span>
+{onEdit && (
+  <button className="edit-btn" onClick={() => setIsEditing(true)} title="Redigera">
+    ✏️
+  </button>
+)}
 {onDelete && (
 <button className="delete-btn" onClick={() => onDelete(product.id)} title="Ta bort">
 ✕
@@ -153,7 +216,7 @@ return (
 )
 }
 
-function FridgeTab({ products, onDelete }) {
+function FridgeTab({ products, onDelete, onEdit }) {
 const [search, setSearch]   = useState('')
 const [filter, setFilter]   = useState('all')
 const [sort, setSort] = useState('expiry')
@@ -210,14 +273,14 @@ onClick={() => setFilter(f.key)}
 {visible.length === 0 ? (
 <div className="empty"><div className="empty-icon">📭</div>Inga varor hittades.</div>
 ) : (
-visible.map(p => <ProductItem key={p.id} product={p} onDelete={onDelete} />)
+visible.map(p => <ProductItem key={p.id} product={p} onDelete={onDelete} onEdit={onEdit} />)
 )}
 </div>
 </div>
 )
 }
 
-function AddTab({ onAdd, recentProducts, onDelete }) {
+function AddTab({ onAdd, recentProducts, onDelete, onEdit }) {
 const today = new Date().toISOString().slice(0, 10)
 const [name,     setName]     = useState('')
 const [date,     setDate]     = useState(today)
@@ -271,7 +334,7 @@ onChange={e => setDate(e.target.value)}
 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 <button className="add-btn" onClick={handleAdd}>Lägg till vara</button>
 {msg && (
-<span style={{ fontSize: 13, color: msg.type === 'ok' ? 'var(–green-600)' : 'var(–red-600)' }}>
+<span style={{ fontSize: 13, color: msg.type === 'ok' ? 'var(--green-600)' : 'var(--red-600)' }}>
 {msg.text}
 </span>
 )}
@@ -283,7 +346,7 @@ onChange={e => setDate(e.target.value)}
     {recentProducts.length === 0
       ? <div className="empty">Inga varor ännu.</div>
       : recentProducts.slice(0, 5).map(p => (
-          <ProductItem key={p.id} product={p} onDelete={onDelete} />
+          <ProductItem key={p.id} product={p} onDelete={onDelete} onEdit={onEdit} />
         ))
     }
   </div>
@@ -397,6 +460,10 @@ function deleteProduct(id) {
 setProducts(prev => prev.filter(p => p.id !== id))
 }
 
+function editProduct(id, updated) {
+  setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p))
+}
+
   // ── avfärda notis ────────────────────────────────────────────────────
   function dismissNotification(id) {
     const updated = [...dismissedIds, id]
@@ -435,8 +502,8 @@ onClick={() => setTab(t.key)}
 
   <main className="app-body">
     {tab === 'overview' && <OverviewTab products={products} />}
-    {tab === 'fridge'   && <FridgeTab   products={products} onDelete={deleteProduct} />}
-    {tab === 'add'      && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={deleteProduct} />}
+    {tab === 'fridge'   && <FridgeTab   products={products} onDelete={deleteProduct} onEdit={editProduct} />}
+    {tab === 'add'      && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={deleteProduct} onEdit={editProduct} />}
     {tab === 'settings' && <SettingsTab notifyDaysBefore={notifyDaysBefore} setNotifyDaysBefore={setNotifyDaysBefore} />}
   </main>
 </div>
