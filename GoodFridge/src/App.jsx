@@ -351,6 +351,126 @@ function SettingsTab({ notifyDaysBefore, setNotifyDaysBefore }) {
     </div>
   )
 }
+function ShoppingTab({ products, shoppingList, setShoppingList }) {
+  const [input, setInput] = useState('')
+
+  const suggestions = products
+    .filter(p => {
+      const dl = daysLeft(p.date)
+      return dl >= -1 && dl <= 5 && !shoppingList.some(i => i.name === p.name)
+    })
+    .sort((a, b) => daysLeft(a.date) - daysLeft(b.date))
+
+  function addItem(name) {
+    if (!name.trim()) return
+    if (shoppingList.some(i => i.name === name.trim())) return
+    setShoppingList(prev => [...prev, { id: Date.now(), name: name.trim(), checked: false }])
+    setInput('')
+  }
+
+  function toggleItem(id) {
+    setShoppingList(prev =>
+      prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)
+    )
+  }
+
+  function removeItem(id) {
+    setShoppingList(prev => prev.filter(i => i.id !== id))
+  }
+
+  function clearChecked() {
+    setShoppingList(prev => prev.filter(i => !i.checked))
+  }
+
+  const unchecked = shoppingList.filter(i => !i.checked)
+  const checked   = shoppingList.filter(i => i.checked)
+
+  return (
+    <div>
+      <h2 className="section-title">Inköpslista</h2>
+
+      <div className="add-form">
+        <div className="form-row" style={{ gridTemplateColumns: '1fr auto' }}>
+          <div className="form-group">
+            <label className="form-label">Lägg till vara</label>
+            <input
+              type="text"
+              placeholder="t.ex. Bröd"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addItem(input)}
+            />
+          </div>
+          <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+            <label className="form-label">&nbsp;</label>
+            <button className="add-btn" onClick={() => addItem(input)}>Lägg till</button>
+          </div>
+        </div>
+
+        {suggestions.length > 0 && (
+          <>
+            <div className="form-label" style={{ marginBottom: 8 }}>
+              Förslag – snart utgångna:
+            </div>
+            <div className="filter-row" style={{ marginBottom: 0 }}>
+              {suggestions.map(p => (
+                <button key={p.id} className="filter-btn" onClick={() => addItem(p.name)}>
+                  + {p.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {shoppingList.length === 0 ? (
+        <div className="empty"><div className="empty-icon">🛒</div>Listan är tom.</div>
+      ) : (
+        <div className="product-list">
+          {unchecked.map(item => (
+            <div key={item.id} className="product-item" style={{ cursor: 'pointer' }}
+              onClick={() => toggleItem(item.id)}>
+              <div style={{
+                width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                border: '1.5px solid var(--border-md)', background: 'var(--surface)'
+              }} />
+              <div className="product-info">
+                <div className="product-name">{item.name}</div>
+              </div>
+              <button className="delete-btn"
+                onClick={e => { e.stopPropagation(); removeItem(item.id) }}>✕</button>
+            </div>
+          ))}
+
+          {checked.length > 0 && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                <div className="form-label">Klara ({checked.length})</div>
+                <button className="filter-btn" onClick={clearChecked}>Rensa klara</button>
+              </div>
+              {checked.map(item => (
+                <div key={item.id} className="product-item" style={{ cursor: 'pointer', opacity: 0.5 }}
+                  onClick={() => toggleItem(item.id)}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    border: '1.5px solid var(--green-400)', background: 'var(--green-400)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 12
+                  }}>✓</div>
+                  <div className="product-info">
+                    <div className="product-name" style={{ textDecoration: 'line-through' }}>{item.name}</div>
+                  </div>
+                  <button className="delete-btn"
+                    onClick={e => { e.stopPropagation(); removeItem(item.id) }}>✕</button>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── main app ───────────────────────────────────────────────────────────────
 
@@ -380,6 +500,15 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('gf-dismissed') || '[]') }
     catch { return [] }
   })
+
+  const [shoppingList, setShoppingList] = useState(() => {
+  try { return JSON.parse(localStorage.getItem('gf-shopping') || '[]') }
+  catch { return [] }
+  })
+
+  useEffect(() => {
+  localStorage.setItem('gf-shopping', JSON.stringify(shoppingList))
+  }, [shoppingList])
 
   useEffect(() => {
     localStorage.setItem('gf-products', JSON.stringify(products))
@@ -414,6 +543,7 @@ export default function App() {
     { key: 'overview',  label: 'Översikt'        },
     { key: 'fridge',    label: 'Mina varor'       },
     { key: 'add',       label: '+ Lägg till'      },
+    { key: 'shopping', label: '🛒 Inköp' },
     { key: 'settings',  label: '⚙️ Inställningar' },
   ]
 
@@ -443,6 +573,7 @@ export default function App() {
         {tab === 'overview'  && <OverviewTab products={products} />}
         {tab === 'fridge'    && <FridgeTab   products={products} onDelete={deleteProduct} />}
         {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={deleteProduct} />}
+        {tab === 'shopping' && ( <ShoppingTab products={products} shoppingList={shoppingList} setShoppingList={setShoppingList}/>)}
         {tab === 'settings'  && <SettingsTab  notifyDaysBefore={notifyDaysBefore} setNotifyDaysBefore={setNotifyDaysBefore} />}
       </main>
     </div>
