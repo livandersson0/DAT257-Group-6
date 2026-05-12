@@ -4,8 +4,9 @@ export async function searchProducts(query) {
   const params = new URLSearchParams({
     engine: 'google_images',
     q: query,
-    google_domain: 'google.com',
-    hl: 'en',
+    google_domain: 'google.se',
+    hl: 'sv',
+    gl: 'se',
     num: '1',
     api_key: API_KEY,
   });
