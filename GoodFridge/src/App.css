@@ -369,7 +369,7 @@ body {
   font-size: 14px;
 }
 .empty-icon { font-size: 36px; margin-bottom: 8px; }
-
+ 
 /* ── notification banner ─────────────────────────────────────────────── */
 .notif-banner {
   position: sticky;
@@ -412,4 +412,3 @@ body {
   .form-row { grid-template-columns: 1fr; }
   .app-body { padding: 16px; }
 }
- 
