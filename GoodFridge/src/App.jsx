@@ -352,6 +352,66 @@ function SettingsTab({ notifyDaysBefore, setNotifyDaysBefore }) {
   )
 }
 
+function DeleteModal({ product, onConfirm, onCancel }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+    }}>
+      <div style={{
+        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
+        padding: 28, maxWidth: 360, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)'
+      }}>
+        <h3 style={{ fontFamily: 'Fraunces, serif', marginBottom: 8 }}>Ta bort vara</h3>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>
+          Vad hände med <strong>{product.name}</strong>?
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button className="add-btn" style={{ background: 'var(--teal-400)' }} onClick={() => onConfirm('eaten')}>
+            🍽️ Jag åt upp den
+          </button>
+          <button className="add-btn" style={{ background: 'var(--red-400)' }} onClick={() => onConfirm('wasted')}>
+            🗑️ Jag slängde den
+          </button>
+          <button className="filter-btn" style={{ marginTop: 4 }} onClick={onCancel}>
+            Avbryt
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WasteTab({ wasteLog }) {
+  return (
+    <div>
+      <h2 className="section-title">Slängda varor</h2>
+      {wasteLog.length === 0 ? (
+        <div className="empty">
+          <div className="empty-icon">✅</div>
+          Inga slängda varor – bra jobbat!
+        </div>
+      ) : (
+        <div className="product-list">
+          {wasteLog.map((p, i) => (
+            <div key={i} className="product-item">
+              <div className="product-info">
+                <div className="product-name">{p.name}</div>
+                <div className="product-sub">
+                  Utgick: {formatDate(p.date)} ·{' '}
+                  <span className="location-pill">{locationLabel(p.location)}</span>
+                  {' '}· Slängt {new Date(p.removedAt).toLocaleDateString('sv-SE')}
+                </div>
+              </div>
+              <span className="badge badge-expired">Slängt</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── main app ───────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -381,10 +441,22 @@ export default function App() {
     catch { return [] }
   })
 
+  const [wasteLog, setWasteLog] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gf-waste-log')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [deleteModal, setDeleteModal] = useState(null)
+
   useEffect(() => {
     localStorage.setItem('gf-products', JSON.stringify(products))
     localStorage.setItem('gf-next-id', String(nextId))
   }, [products, nextId])
+
+  useEffect(() => {
+    localStorage.setItem('gf-waste-log', JSON.stringify(wasteLog))
+  }, [wasteLog])
 
   useEffect(() => {
     localStorage.setItem('gf-notify-days', String(notifyDaysBefore))
@@ -400,8 +472,22 @@ export default function App() {
     setNextId(n => n + 1)
   }
 
-  function deleteProduct(id) {
-    setProducts(prev => prev.filter(p => p.id !== id))
+  function requestDelete(id) {
+    const product = products.find(p => p.id === id)
+    setDeleteModal({ product })
+  }
+
+  function confirmDelete(reason) {
+    const { product } = deleteModal
+    if (reason === 'wasted') {
+      setWasteLog(prev => [{ ...product, removedAt: new Date().toISOString() }, ...prev])
+    }
+    setProducts(prev => prev.filter(p => p.id !== product.id))
+    setDeleteModal(null)
+  }
+
+  function cancelDelete() {
+    setDeleteModal(null)
   }
 
   function dismissNotification(id) {
@@ -414,6 +500,7 @@ export default function App() {
     { key: 'overview',  label: 'Översikt'        },
     { key: 'fridge',    label: 'Mina varor'       },
     { key: 'add',       label: '+ Lägg till'      },
+    { key: 'waste',     label: '🗑️ Slängt'        },
     { key: 'settings',  label: '⚙️ Inställningar' },
   ]
 
@@ -441,10 +528,19 @@ export default function App() {
 
       <main className="app-body">
         {tab === 'overview'  && <OverviewTab products={products} />}
-        {tab === 'fridge'    && <FridgeTab   products={products} onDelete={deleteProduct} />}
-        {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={deleteProduct} />}
+        {tab === 'fridge'    && <FridgeTab   products={products} onDelete={requestDelete} />}
+        {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} />}
+        {tab === 'waste'     && <WasteTab     wasteLog={wasteLog} />}
         {tab === 'settings'  && <SettingsTab  notifyDaysBefore={notifyDaysBefore} setNotifyDaysBefore={setNotifyDaysBefore} />}
       </main>
+
+      {deleteModal && (
+        <DeleteModal
+          product={deleteModal.product}
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+      )}
     </div>
   )
 }
