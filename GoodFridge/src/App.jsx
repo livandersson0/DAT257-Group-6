@@ -742,11 +742,6 @@ export default function App() {
     localStorage.removeItem('gf-pending-water')
   }
   
-  function handleWater() {
-    const today = new Date().toISOString().slice(0, 10)
-    setHasWatered(true)
-    localStorage.setItem('gf-watered-date', today)
-  }
   
   function handleStartTree() {
     setTreeStarted(true)
@@ -796,24 +791,12 @@ export default function App() {
       <NotificationBanner notifications={notifications} onDismiss={dismissNotification} settings={settings} />
 
       <main className="app-body">
-        {tab === 'overview'  && <OverviewTab products={products} />}
-        {tab === 'settings'  && <SettingsTab settings={settings} onUpdate={updateSettings} />}
-        {tab === 'fridge'    && <FridgeTab   products={products} onDelete={requestDelete} />}
-        {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} />}
-        {tab === 'waste'     && <WasteTab     wasteLog={wasteLog} />}
-        {tab === 'settings'  && <SettingsTab  notifyDaysBefore={notifyDaysBefore} setNotifyDaysBefore={setNotifyDaysBefore} />}
-        {tab === 'level' && (
-          <LevelTab
-              points={points}
-              level={level}
-              onWater={handleWater}
-              pendingWater={pendingWater}
-              treeStarted={treeStarted}
-              onStartTree={handleStartTree}
-          />
-          )}
-        {tab === 'add'       && <AddTab      onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} settings={settings} />}
-        {tab === 'history'   && <HistoryTab  wasteLog={wasteLog} />}
+      {tab === 'overview' && <OverviewTab products={products} />}
+      {tab === 'fridge'   && <FridgeTab   products={products} onDelete={requestDelete} />}
+      {tab === 'add'      && <AddTab      onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} settings={settings} />}
+      {tab === 'history'  && <HistoryTab  wasteLog={wasteLog} />}
+      {tab === 'settings' && <SettingsTab settings={settings} onUpdate={updateSettings} />}
+      {tab === 'level'    && <LevelTab    points={points} level={level} onWater={handleWater} pendingWater={pendingWater} treeStarted={treeStarted} onStartTree={handleStartTree} />}
       </main>
 
       {deleteModal && (
