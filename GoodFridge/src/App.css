@@ -459,7 +459,6 @@ body {
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .app-body { padding: 16px; }
-<<<<<<< HEAD
 }
 
 /* ── level tab ───────────────────────────────────────────────────────────── */
@@ -590,7 +589,4 @@ body {
   font-weight: 500;
   color: var(--teal-600);
 }
- 
-=======
-}
->>>>>>> 0642cc8 (edit products)
+
