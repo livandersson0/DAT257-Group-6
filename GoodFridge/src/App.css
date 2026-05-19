@@ -385,7 +385,7 @@ body {
   font-size: 14px;
 }
 .empty-icon { font-size: 36px; margin-bottom: 8px; }
-
+ 
 /* ── notification banner ─────────────────────────────────────────────── */
 .notif-banner {
   position: sticky;
@@ -459,6 +459,7 @@ body {
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .app-body { padding: 16px; }
+<<<<<<< HEAD
 }
 
 /* ── level tab ───────────────────────────────────────────────────────────── */
@@ -590,3 +591,6 @@ body {
   color: var(--teal-600);
 }
  
+=======
+}
+>>>>>>> 0642cc8 (edit products)
