@@ -438,28 +438,75 @@ function DeleteModal({ product, onConfirm, onCancel }) {
   )
 }
 
-function WasteTab({ wasteLog }) {
+// ── HistoryTab (ersätter WasteTab) ────────────────────────────────────────
+
+function HistoryTab({ wasteLog }) {
+  const [filter, setFilter] = useState('all')
+
+  const FILTERS = [
+    { key: 'all',    label: 'Alla'       },
+    { key: 'eaten',  label: '🍽️ Uppätna'    },
+    { key: 'wasted', label: '🗑️ Slängd' },
+  ]
+
+  const visible = wasteLog.filter(p => filter === 'all' || p.reason === filter)
+  const totalEaten  = wasteLog.filter(p => p.reason === 'eaten').length
+  const totalWasted = wasteLog.filter(p => p.reason === 'wasted').length
+
   return (
     <div>
-      <h2 className="section-title">Slängda varor</h2>
-      {wasteLog.length === 0 ? (
+      <h2 className="section-title">Historik</h2>
+
+      {wasteLog.length > 0 && (
+        <div className="stats-grid" style={{ marginBottom: 20 }}>
+          <div className="stat-card">
+            <div className="stat-num">{wasteLog.length}</div>
+            <div className="stat-label">varor totalt</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num" style={{ color: 'var(--teal-400)' }}>{totalEaten}</div>
+            <div className="stat-label">uppätna</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num" style={{ color: 'var(--red-400)' }}>{totalWasted}</div>
+            <div className="stat-label">slängda</div>
+          </div>
+        </div>
+      )}
+
+      <div className="filter-row">
+        {FILTERS.map(f => (
+          <button
+            key={f.key}
+            className={`filter-btn${filter === f.key ? ' active' : ''}`}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
         <div className="empty">
-          <div className="empty-icon">✅</div>
-          Inga slängda varor – bra jobbat!
+          <div className="empty-icon">{filter === 'wasted' ? '✅' : '📭'}</div>
+          {filter === 'wasted' ? 'Inga slängda varor – bra jobbat!' : 'Ingen historik här ännu.'}
         </div>
       ) : (
         <div className="product-list">
-          {wasteLog.map((p, i) => (
+          {visible.map((p, i) => (
             <div key={i} className="product-item">
               <div className="product-info">
                 <div className="product-name">{p.name}</div>
                 <div className="product-sub">
                   Utgick: {formatDate(p.date)} ·{' '}
                   <span className="location-pill">{locationLabel(p.location)}</span>
-                  {' '}· Slängt {new Date(p.removedAt).toLocaleDateString('sv-SE')}
+                  {' '}· {new Date(p.removedAt).toLocaleDateString('sv-SE')}
                 </div>
               </div>
-              <span className="badge badge-expired">Slängt</span>
+              {p.reason === 'eaten'
+                ? <span className="badge badge-ok">🍽️ Åts upp</span>
+                : <span className="badge badge-expired">🗑️ Slängt</span>
+              }
             </div>
           ))}
         </div>
@@ -496,7 +543,7 @@ export default function App() {
       return { notifyDaysBefore: 2, soundEnabled: true, darkMode: false, defaultLocation: 'fridge' }
     }
   })
-  
+
   function updateSettings(patch) {
     setSettings(prev => ({ ...prev, ...patch }))
   }
@@ -525,8 +572,8 @@ export default function App() {
   }, [wasteLog])
 
   useEffect(() => {
-  localStorage.setItem('gf-settings', JSON.stringify(settings))
-  document.body.classList.toggle('dark', settings.darkMode)
+    localStorage.setItem('gf-settings', JSON.stringify(settings))
+    document.body.classList.toggle('dark', settings.darkMode)
     const expiring = products.filter(p => {
       const dl = daysLeft(p.date)
       return dl >= 0 && dl <= settings.notifyDaysBefore && !dismissedIds.includes(p.id)
@@ -544,11 +591,10 @@ export default function App() {
     setDeleteModal({ product })
   }
 
+  // Sparar reason ('eaten' eller 'wasted') för alla borttagna varor
   function confirmDelete(reason) {
     const { product } = deleteModal
-    if (reason === 'wasted') {
-      setWasteLog(prev => [{ ...product, removedAt: new Date().toISOString() }, ...prev])
-    }
+    setWasteLog(prev => [{ ...product, removedAt: new Date().toISOString(), reason }, ...prev])
     setProducts(prev => prev.filter(p => p.id !== product.id))
     setDeleteModal(null)
   }
@@ -567,7 +613,7 @@ export default function App() {
     { key: 'overview',  label: 'Översikt'        },
     { key: 'fridge',    label: 'Mina varor'       },
     { key: 'add',       label: '+ Lägg till'      },
-    { key: 'waste',     label: '🗑️ Slängt'        },
+    { key: 'history',   label: '📋 Historik'      },
     { key: 'settings',  label: '⚙️ Inställningar' },
   ]
 
@@ -595,10 +641,10 @@ export default function App() {
 
       <main className="app-body">
         {tab === 'overview'  && <OverviewTab products={products} />}
-        {tab === 'settings'  && <SettingsTab  settings={settings} onUpdate={updateSettings} />}
+        {tab === 'settings'  && <SettingsTab settings={settings} onUpdate={updateSettings} />}
         {tab === 'fridge'    && <FridgeTab   products={products} onDelete={requestDelete} />}
-        {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} settings={settings} />}
-        {tab === 'waste'     && <WasteTab     wasteLog={wasteLog} />}
+        {tab === 'add'       && <AddTab      onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} settings={settings} />}
+        {tab === 'history'   && <HistoryTab  wasteLog={wasteLog} />}
       </main>
 
       {deleteModal && (
