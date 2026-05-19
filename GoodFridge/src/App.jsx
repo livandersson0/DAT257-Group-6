@@ -98,7 +98,7 @@ function OverviewTab({ products }) {
 
   const statTotal  = products.length
   const statUrgent = products.filter(p => { const dl = daysLeft(p.date); return dl >= 0 && dl <= 2 }).length
-  const statOk     = products.filter(p => daysLeft(p.date) > 5).length
+  const statOk     = products.filter(p => daysLeft(p.date) > 2).length
 
   return (
     <div>
@@ -611,3 +611,4 @@ export default function App() {
     </div>
   )
 }
+
