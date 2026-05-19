@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { searchProducts } from "./api/products";
+import Logo from './assets/Logo.png'
 
 import trad1 from './assets/images/level/trad1.png'
 import trad2 from './assets/images/level/trad2.png'
@@ -111,7 +112,7 @@ function OverviewTab({ products }) {
 
   const statTotal  = products.length
   const statUrgent = products.filter(p => { const dl = daysLeft(p.date); return dl >= 0 && dl <= 2 }).length
-  const statOk     = products.filter(p => daysLeft(p.date) > 5).length
+  const statOk     = products.filter(p => daysLeft(p.date) > 2).length
 
   return (
     <div>
@@ -124,7 +125,7 @@ function OverviewTab({ products }) {
             {expiring.length > 0 && (
               <>
                 <div className="day-dot" />
-                <div className="day-count">{expiring.length} vara{expiring.length > 1 ? 'r' : ''}</div>
+                <div className="day-count">{expiring.length} {expiring.length > 1 ? 'varor' : 'vara'}</div>
               </>
             )}
           </div>
@@ -222,13 +223,17 @@ function FridgeTab({ products, onDelete }) {
   )
 }
 
-function AddTab({ onAdd, recentProducts, onDelete }) {
+function AddTab({ onAdd, recentProducts, onDelete, settings }) {
   const today = new Date().toISOString().slice(0, 10)
   const [name,      setName]      = useState('')
   const [date,      setDate]      = useState(today)
-  const [location,  setLocation]  = useState('fridge')
+  const [location,  setLocation]  = useState(settings.defaultLocation)
   const [msg,       setMsg]       = useState(null)
   const [searching, setSearching] = useState(false)
+
+  useEffect(() => {
+    setLocation(settings.defaultLocation)
+  }, [settings.defaultLocation])
 
   async function handleAdd() {
     if (!name.trim() || !date) {
@@ -316,11 +321,19 @@ function AddTab({ onAdd, recentProducts, onDelete }) {
   )
 }
 
-function NotificationBanner({ notifications, onDismiss }) {
+function NotificationBanner({ notifications, onDismiss, settings }) {
   useEffect(() => {
-    if (notifications.length > 0) {
-      const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3')
-      audio.play().catch(() => {})
+    if (notifications.length > 0 && settings?.soundEnabled) {
+      const ctx = new AudioContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.4)
     }
   }, [notifications.length])
 
@@ -340,26 +353,70 @@ function NotificationBanner({ notifications, onDismiss }) {
   )
 }
 
-function SettingsTab({ notifyDaysBefore, setNotifyDaysBefore }) {
+function SettingsTab({ settings, onUpdate }) {
   return (
     <div>
-      <h2 className="section-title">Notifikationsinställningar</h2>
+      <h2 className="section-title">Notifikationer</h2>
       <div className="add-form">
         <label className="form-label">Notifiera mig när en vara går ut inom:</label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
           {[1, 2, 3, 5, 7].map(d => (
             <button
               key={d}
-              className={`filter-btn${notifyDaysBefore === d ? ' active' : ''}`}
-              onClick={() => setNotifyDaysBefore(d)}
+              className={`filter-btn${settings.notifyDaysBefore === d ? ' active' : ''}`}
+              onClick={() => onUpdate({ notifyDaysBefore: d })}
             >
               {d} dag{d === 1 ? '' : 'ar'}
             </button>
           ))}
         </div>
         <p style={{ marginTop: 16, fontSize: 13, color: 'var(--text-2)' }}>
-          Du får notis om varor som går ut inom <strong>{notifyDaysBefore} dagar</strong>.
+          Du får notis om varor som går ut inom <strong>{settings.notifyDaysBefore} dagar</strong>.
         </p>
+      </div>
+
+      <h2 className="section-title">Ljud</h2>
+      <div className="add-form">
+        <div className="settings-row">
+          <span className="form-label">Spela upp ljud vid notifikation</span>
+          <button
+            className={`toggle-btn${settings.soundEnabled ? ' on' : ''}`}
+            onClick={() => onUpdate({ soundEnabled: !settings.soundEnabled })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+      </div>
+
+      <h2 className="section-title">Utseende</h2>
+      <div className="add-form">
+        <div className="settings-row">
+          <span className="form-label">Mörkt läge</span>
+          <button
+            className={`toggle-btn${settings.darkMode ? ' on' : ''}`}
+            onClick={() => onUpdate({ darkMode: !settings.darkMode })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+      </div>
+
+      <h2 className="section-title">Personalisering</h2>
+      <div className="add-form">
+        <div className="settings-row" style={{ marginBottom: 16 }}>
+          <span className="form-label">Standardplats för nya varor</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[['fridge','🧊 Kyl'], ['freezer','❄️ Frys'], ['pantry','🗄️ Skafferi']].map(([loc, label]) => (
+              <button
+                key={loc}
+                className={`filter-btn${settings.defaultLocation === loc ? ' active' : ''}`}
+                onClick={() => onUpdate({ defaultLocation: loc })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -395,28 +452,75 @@ function DeleteModal({ product, onConfirm, onCancel }) {
   )
 }
 
-function WasteTab({ wasteLog }) {
+// ── HistoryTab (ersätter WasteTab) ────────────────────────────────────────
+
+function HistoryTab({ wasteLog }) {
+  const [filter, setFilter] = useState('all')
+
+  const FILTERS = [
+    { key: 'all',    label: 'Alla'       },
+    { key: 'eaten',  label: '🍽️ Uppätna'    },
+    { key: 'wasted', label: '🗑️ Slängd' },
+  ]
+
+  const visible = wasteLog.filter(p => filter === 'all' || p.reason === filter)
+  const totalEaten  = wasteLog.filter(p => p.reason === 'eaten').length
+  const totalWasted = wasteLog.filter(p => p.reason === 'wasted').length
+
   return (
     <div>
-      <h2 className="section-title">Slängda varor</h2>
-      {wasteLog.length === 0 ? (
+      <h2 className="section-title">Historik</h2>
+
+      {wasteLog.length > 0 && (
+        <div className="stats-grid" style={{ marginBottom: 20 }}>
+          <div className="stat-card">
+            <div className="stat-num">{wasteLog.length}</div>
+            <div className="stat-label">varor totalt</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num" style={{ color: 'var(--teal-400)' }}>{totalEaten}</div>
+            <div className="stat-label">uppätna</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-num" style={{ color: 'var(--red-400)' }}>{totalWasted}</div>
+            <div className="stat-label">slängda</div>
+          </div>
+        </div>
+      )}
+
+      <div className="filter-row">
+        {FILTERS.map(f => (
+          <button
+            key={f.key}
+            className={`filter-btn${filter === f.key ? ' active' : ''}`}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
         <div className="empty">
-          <div className="empty-icon">✅</div>
-          Inga slängda varor – bra jobbat!
+          <div className="empty-icon">{filter === 'wasted' ? '✅' : '📭'}</div>
+          {filter === 'wasted' ? 'Inga slängda varor – bra jobbat!' : 'Ingen historik här ännu.'}
         </div>
       ) : (
         <div className="product-list">
-          {wasteLog.map((p, i) => (
+          {visible.map((p, i) => (
             <div key={i} className="product-item">
               <div className="product-info">
                 <div className="product-name">{p.name}</div>
                 <div className="product-sub">
                   Utgick: {formatDate(p.date)} ·{' '}
                   <span className="location-pill">{locationLabel(p.location)}</span>
-                  {' '}· Slängt {new Date(p.removedAt).toLocaleDateString('sv-SE')}
+                  {' '}· {new Date(p.removedAt).toLocaleDateString('sv-SE')}
                 </div>
               </div>
-              <span className="badge badge-expired">Slängt</span>
+              {p.reason === 'eaten'
+                ? <span className="badge badge-ok">🍽️ Åts upp</span>
+                : <span className="badge badge-expired">🗑️ Slängt</span>
+              }
             </div>
           ))}
         </div>
@@ -529,9 +633,19 @@ export default function App() {
   })
   const [tab, setTab] = useState('overview')
 
-  const [notifyDaysBefore, setNotifyDaysBefore] = useState(() => {
-    return Number(localStorage.getItem('gf-notify-days') || '2')
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gf-settings')
+      return saved ? JSON.parse(saved) : { notifyDaysBefore: 2, soundEnabled: true, darkMode: false, defaultLocation: 'fridge' }
+    } catch {
+      return { notifyDaysBefore: 2, soundEnabled: true, darkMode: false, defaultLocation: 'fridge' }
+    }
   })
+
+  function updateSettings(patch) {
+    setSettings(prev => ({ ...prev, ...patch }))
+  }
+
   const [notifications, setNotifications] = useState([])
   const [dismissedIds, setDismissedIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem('gf-dismissed') || '[]') }
@@ -560,13 +674,14 @@ export default function App() {
   }, [wasteLog])
 
   useEffect(() => {
-    localStorage.setItem('gf-notify-days', String(notifyDaysBefore))
+    localStorage.setItem('gf-settings', JSON.stringify(settings))
+    document.body.classList.toggle('dark', settings.darkMode)
     const expiring = products.filter(p => {
       const dl = daysLeft(p.date)
-      return dl >= 0 && dl <= notifyDaysBefore && !dismissedIds.includes(p.id)
+      return dl >= 0 && dl <= settings.notifyDaysBefore && !dismissedIds.includes(p.id)
     })
     setNotifications(expiring)
-  }, [products, notifyDaysBefore, dismissedIds])
+  }, [products, settings, dismissedIds])
 
   function addProduct({ name, date, location, image }) {
     setProducts(prev => [{ id: nextId, name, date, location, image }, ...prev])
@@ -578,6 +693,7 @@ export default function App() {
     setDeleteModal({ product })
   }
 
+  // Sparar reason ('eaten' eller 'wasted') för alla borttagna varor
   function confirmDelete(reason) {
     const { product } = deleteModal
     if (reason === 'wasted') {
@@ -586,6 +702,7 @@ export default function App() {
     } else if (reason === 'eaten') {
       addPoints(+10)
     }
+    setWasteLog(prev => [{ ...product, removedAt: new Date().toISOString(), reason }, ...prev])
     setProducts(prev => prev.filter(p => p.id !== product.id))
     setDeleteModal(null)
   }
@@ -640,7 +757,7 @@ export default function App() {
     { key: 'overview',  label: 'Översikt'        },
     { key: 'fridge',    label: 'Mina varor'       },
     { key: 'add',       label: '+ Lägg till'      },
-    { key: 'waste',     label: '🗑️ Slängt'        },
+    { key: 'history',   label: '📋 Historik'      },
     { key: 'settings',  label: '⚙️ Inställningar' },
     { key: 'level', label: '🌳 Level' },
   ]
@@ -648,8 +765,19 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="logo">
-          <div className="logo-icon">🥦</div>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 100, height: 100, overflow: 'hidden' }}>
+            <img
+              src={Logo}
+              alt="logo"
+              style={{
+                width: 100,
+                height: 170,
+                objectFit: 'cover',
+                objectPosition: 'top'
+              }}
+            />
+          </div>
           GoodFridge
         </div>
         <nav className="nav">
@@ -665,10 +793,11 @@ export default function App() {
         </nav>
       </header>
 
-      <NotificationBanner notifications={notifications} onDismiss={dismissNotification} />
+      <NotificationBanner notifications={notifications} onDismiss={dismissNotification} settings={settings} />
 
       <main className="app-body">
         {tab === 'overview'  && <OverviewTab products={products} />}
+        {tab === 'settings'  && <SettingsTab settings={settings} onUpdate={updateSettings} />}
         {tab === 'fridge'    && <FridgeTab   products={products} onDelete={requestDelete} />}
         {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} />}
         {tab === 'waste'     && <WasteTab     wasteLog={wasteLog} />}
@@ -683,6 +812,8 @@ export default function App() {
               onStartTree={handleStartTree}
           />
           )}
+        {tab === 'add'       && <AddTab      onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} settings={settings} />}
+        {tab === 'history'   && <HistoryTab  wasteLog={wasteLog} />}
       </main>
 
       {deleteModal && (
@@ -695,3 +826,4 @@ export default function App() {
     </div>
   )
 }
+

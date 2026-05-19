@@ -31,6 +31,22 @@
   --text-3:    #a5a5a0;
   --bg-muted:  #ebebea;
 }
+
+/*-dark mode----------- */
+body.dark {
+  --bg:        #1a1a18;
+  --surface:   #242422;
+  --border:    rgba(255,255,255,0.08);
+  --border-md: rgba(255,255,255,0.15);
+  --text:      #f0f0ee;
+  --text-2:    #a5a5a0;
+  --text-3:    #6b6b67;
+  --bg-muted:  #2e2e2c;
+  --green-50:  #1e2e12;
+  --amber-50:  #2e2010;
+  --red-50:    #2e1212;
+  --teal-50:   #0e2420;
+}
  
 /* ── reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -403,7 +419,39 @@ body {
 .notif-item button:hover {
   background: var(--amber-100);
 }
- 
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toggle-btn {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--border-md);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-btn.on {
+  background: var(--green-400);
+  justify-content: flex-end;
+}
+.toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
 /* ── responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .app-header { flex-direction: column; gap: 10px; align-items: flex-start; }
