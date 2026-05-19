@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { searchProducts } from "./api/products";
+import Logo from './assets/Logo.png'
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -620,8 +621,19 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="logo">
-          <div className="logo-icon">🥦</div>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 100, height: 100, overflow: 'hidden' }}>
+            <img
+              src={Logo}
+              alt="logo"
+              style={{
+                width: 100,
+                height: 170,
+                objectFit: 'cover',
+                objectPosition: 'top'
+              }}
+            />
+          </div>
           GoodFridge
         </div>
         <nav className="nav">
