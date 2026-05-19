@@ -112,7 +112,7 @@ function OverviewTab({ products }) {
             {expiring.length > 0 && (
               <>
                 <div className="day-dot" />
-                <div className="day-count">{expiring.length} vara{expiring.length > 1 ? 'r' : ''}</div>
+                <div className="day-count">{expiring.length} {expiring.length > 1 ? 'varor' : 'vara'}</div>
               </>
             )}
           </div>
