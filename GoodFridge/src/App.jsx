@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { searchProducts } from "./api/products";
 
+import trad1 from './assets/images/level/trad1.png'
+import trad2 from './assets/images/level/trad2.png'
+import trad3 from './assets/images/level/trad3.png'
+import trad4 from './assets/images/level/trad4.png'
+import trad5 from './assets/images/level/trad5.png'
+import trad6 from './assets/images/level/trad6.png'
+import trad7 from './assets/images/level/trad7.png'
+import trad8 from './assets/images/level/trad8.png'
+import trad9 from './assets/images/level/trad9.png'
+import trad10 from './assets/images/level/trad10.png'
+
+const TREE_IMAGES = [trad1, trad2, trad3, trad4, trad5, trad6, trad7, trad8, trad9, trad10]
+
 // ── helpers ────────────────────────────────────────────────────────────────
 
 function offsetDate(days) {
@@ -412,7 +425,91 @@ function WasteTab({ wasteLog }) {
   )
 }
 
+function LevelTab({ points, level, onWater, pendingWater, treeStarted, onStartTree }) {
+  const MAX_LEVEL = 10
+  const progress = points % 100
+  const treeImg = TREE_IMAGES[Math.min(level - 1, 9)]
+  const [showSparkle, setShowSparkle] = useState(false)
+  const [hasWateredThisLevel, setHasWateredThisLevel] = useState(false)
+
+  function handleWaterClick() {
+    if (hasWateredThisLevel) return
+    setHasWateredThisLevel(true)
+    setShowSparkle(true)
+    setTimeout(() => {
+      setShowSparkle(false)
+      onWater()
+    }, 1800)
+  }
+
+  if (!treeStarted) {
+    return (
+      <div className="level-page">
+        <h2 className="section-title">Ditt träd</h2>
+        <div className="level-seed-screen">
+          <div className="level-seed-icon">🪴</div>
+          <p className="level-seed-text">Du har inget träd ännu. Så ett frö för att börja din resa!</p>
+          <button className="add-btn" onClick={onStartTree}>🌱 Så ett frö</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="level-page">
+      <h2 className="section-title">Ditt träd</h2>
+
+      <div className="level-header">
+        <div className="level-badge">Level {level}</div>
+        {level < MAX_LEVEL && (
+          <div className="level-progress-wrap">
+            <div className="level-progress-bar">
+              <div className="level-progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="level-progress-text">{progress}/100 poäng till nästa level</span>
+          </div>
+        )}
+        {level >= MAX_LEVEL && (
+          <div className="level-max">🏆 Max level uppnådd!</div>
+        )}
+      </div>
+
+      <div className="level-tree-wrap">
+        <img
+          src={treeImg}
+          alt={`Träd level ${level}`}
+          className={`level-tree-img${showSparkle ? ' watered' : ''}`}
+        />
+        {showSparkle && (
+          <div className="level-sparkles">
+            {['✨','⭐','💫','✨','🌟','💫','⭐','✨'].map((s, i) => (
+              <span key={i} className="sparkle" style={{
+                left: `${10 + Math.random() * 80}%`,
+                top:  `${10 + Math.random() * 80}%`,
+                animationDelay: `${i * 0.15}s`
+              }}>{s}</span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {pendingWater && !showSparkle && !hasWateredThisLevel && (
+        <div className="level-levelup-box">
+          <p className="level-levelup-msg">🎉 Du har nått level {level}! Vattna trädet för att se det växa!</p>
+          <button className="add-btn level-water-btn" onClick={handleWaterClick}>
+            💧 Vattna trädet
+          </button>
+        </div>
+      )}
+
+      {showSparkle && (
+        <p className="level-watered-msg">✨ Magiskt! Trädet växer! ✨</p>
+      )}
+    </div>
+  )
+}
 // ── main app ───────────────────────────────────────────────────────────────
+
 
 export default function App() {
   const [products, setProducts] = useState(() => {
@@ -448,6 +545,10 @@ export default function App() {
     } catch { return [] }
   })
   const [deleteModal, setDeleteModal] = useState(null)
+  const [points, setPoints] = useState(() => Number(localStorage.getItem('gf-points') || '0'))
+  const [level,  setLevel]  = useState(() => Number(localStorage.getItem('gf-level')  || '1'))
+  const [treeStarted, setTreeStarted] = useState(() => localStorage.getItem('gf-tree-started') === 'true')
+  const [pendingWater, setPendingWater] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('gf-products', JSON.stringify(products))
@@ -481,6 +582,9 @@ export default function App() {
     const { product } = deleteModal
     if (reason === 'wasted') {
       setWasteLog(prev => [{ ...product, removedAt: new Date().toISOString() }, ...prev])
+      addPoints(-10)
+    } else if (reason === 'eaten') {
+      addPoints(+10)
     }
     setProducts(prev => prev.filter(p => p.id !== product.id))
     setDeleteModal(null)
@@ -495,6 +599,42 @@ export default function App() {
     setDismissedIds(updated)
     localStorage.setItem('gf-dismissed', JSON.stringify(updated))
   }
+  function addPoints(delta) {
+    setPoints(prev => {
+      const MAX_LEVEL = 10
+      let newPoints = prev + delta
+      let newLevel  = level
+  
+      if (delta > 0 && newPoints >= 100 && newLevel < MAX_LEVEL) {
+        newPoints = newPoints - 100
+        newLevel  = newLevel + 1
+        setLevel(newLevel)
+        setPendingWater(true)
+        localStorage.setItem('gf-level', String(newLevel))
+        localStorage.setItem('gf-pending-water', 'true')
+      }
+      if (newPoints < 0) newPoints = 0
+  
+      localStorage.setItem('gf-points', String(newPoints))
+      return newPoints
+    })
+  }
+  
+  function handleWater() {
+    setPendingWater(false)
+    localStorage.removeItem('gf-pending-water')
+  }
+  
+  function handleWater() {
+    const today = new Date().toISOString().slice(0, 10)
+    setHasWatered(true)
+    localStorage.setItem('gf-watered-date', today)
+  }
+  
+  function handleStartTree() {
+    setTreeStarted(true)
+    localStorage.setItem('gf-tree-started', 'true')
+  }
 
   const TABS = [
     { key: 'overview',  label: 'Översikt'        },
@@ -502,6 +642,7 @@ export default function App() {
     { key: 'add',       label: '+ Lägg till'      },
     { key: 'waste',     label: '🗑️ Slängt'        },
     { key: 'settings',  label: '⚙️ Inställningar' },
+    { key: 'level', label: '🌳 Level' },
   ]
 
   return (
@@ -532,6 +673,16 @@ export default function App() {
         {tab === 'add'       && <AddTab       onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} />}
         {tab === 'waste'     && <WasteTab     wasteLog={wasteLog} />}
         {tab === 'settings'  && <SettingsTab  notifyDaysBefore={notifyDaysBefore} setNotifyDaysBefore={setNotifyDaysBefore} />}
+        {tab === 'level' && (
+          <LevelTab
+              points={points}
+              level={level}
+              onWater={handleWater}
+              pendingWater={pendingWater}
+              treeStarted={treeStarted}
+              onStartTree={handleStartTree}
+          />
+          )}
       </main>
 
       {deleteModal && (
