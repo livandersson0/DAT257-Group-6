@@ -385,7 +385,7 @@ body {
   font-size: 14px;
 }
 .empty-icon { font-size: 36px; margin-bottom: 8px; }
-
+ 
 /* ── notification banner ─────────────────────────────────────────────── */
 .notif-banner {
   position: sticky;
@@ -589,4 +589,4 @@ body {
   font-weight: 500;
   color: var(--teal-600);
 }
- 
+

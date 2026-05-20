@@ -61,9 +61,137 @@ const SAMPLE_PRODUCTS = [
   { id: 7, name: 'Cheddar',      date: offsetDate(2),  location: 'fridge'  },
 ]
 
+// ── EditModal ──────────────────────────────────────────────────────────────
+
+function EditModal({ product, onSave, onClose }) {
+  const [date, setDate] = useState(product.date)
+  const [location, setLocation] = useState(product.location)
+
+  const LOCATIONS = [
+    { key: 'fridge',  label: '🧊 Kyl'      },
+    { key: 'freezer', label: '❄️ Frys'     },
+    { key: 'pantry',  label: '🗄️ Skafferi' },
+  ]
+
+  function handleSave() {
+    onSave(product.id, { date, location })
+    onClose()
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target === e.currentTarget) onClose()
+  }
+
+  return (
+    <div
+      onClick={handleBackdropClick}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(0,0,0,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '20px',
+        width: '100%',
+        maxWidth: '380px',
+        border: '0.5px solid var(--border)',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <span style={{ fontFamily: 'Fraunces, serif', fontSize: '16px', fontWeight: 600 }}>
+            Redigera vara
+          </span>
+          <button className="delete-btn" onClick={onClose} title="Stäng">✕</button>
+        </div>
+
+        {/* Product name row */}
+        <div style={{
+          background: 'var(--bg-muted)',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 12px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}>
+          {product.image
+            ? <img src={product.image} alt={product.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
+            : <div style={{ width: 36, height: 36, borderRadius: 6, background: 'var(--bg)', flexShrink: 0 }} />
+          }
+          <span style={{ fontWeight: 500, fontSize: '14px' }}>{product.name}</span>
+        </div>
+
+        {/* Date field */}
+        <div className="form-group" style={{ marginBottom: '14px' }}>
+          <label className="form-label">Utgångsdatum</label>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+          />
+        </div>
+
+        {/* Location toggle */}
+        <div className="form-group" style={{ marginBottom: '20px' }}>
+          <label className="form-label">Plats</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {LOCATIONS.map(loc => (
+              <button
+                key={loc.key}
+                onClick={() => setLocation(loc.key)}
+                style={{
+                  flex: 1,
+                  padding: '8px 4px',
+                  borderRadius: 'var(--radius-md)',
+                  border: location === loc.key
+                    ? '2px solid var(--teal-400)'
+                    : '0.5px solid var(--border-md)',
+                  background: location === loc.key ? 'var(--teal-50)' : 'none',
+                  color: location === loc.key ? 'var(--teal-600)' : 'var(--text-2)',
+                  fontSize: '13px',
+                  fontWeight: location === loc.key ? 500 : 400,
+                  cursor: 'pointer',
+                  fontFamily: 'DM Sans, sans-serif',
+                  transition: 'all 0.12s',
+                }}
+              >
+                {loc.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1, padding: '9px',
+              border: '0.5px solid var(--border-md)',
+              borderRadius: 'var(--radius-md)',
+              background: 'none', cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif', fontSize: '14px',
+              color: 'var(--text-2)', transition: 'background 0.12s',
+            }}
+          >
+            Avbryt
+          </button>
+          <button className="add-btn" onClick={handleSave} style={{ flex: 1 }}>
+            Spara
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── sub-components ─────────────────────────────────────────────────────────
 
-function ProductItem({ product, onDelete }) {
+function ProductItem({ product, onDelete, onEdit }) {
   const days = daysLeft(product.date)
   const badge = getBadge(days)
   return (
@@ -82,6 +210,16 @@ function ProductItem({ product, onDelete }) {
         </div>
       </div>
       <span className={`badge ${badge.cls}`}>{badge.text}</span>
+      {onEdit && (
+        <button
+          className="delete-btn"
+          onClick={() => onEdit(product)}
+          title="Redigera"
+          style={{ fontSize: '16px' }}
+        >
+          ✎
+        </button>
+      )}
       {onDelete && (
         <button className="delete-btn" onClick={() => onDelete(product.id)} title="Ta bort">
           ✕
@@ -160,7 +298,7 @@ function OverviewTab({ products }) {
   )
 }
 
-function FridgeTab({ products, onDelete }) {
+function FridgeTab({ products, onDelete, onEdit }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [sort, setSort]     = useState('expiry')
@@ -216,14 +354,14 @@ function FridgeTab({ products, onDelete }) {
         {visible.length === 0 ? (
           <div className="empty"><div className="empty-icon">📭</div>Inga varor hittades.</div>
         ) : (
-          visible.map(p => <ProductItem key={p.id} product={p} onDelete={onDelete} />)
+          visible.map(p => <ProductItem key={p.id} product={p} onDelete={onDelete} onEdit={onEdit} />)
         )}
       </div>
     </div>
   )
 }
 
-function AddTab({ onAdd, recentProducts, onDelete, settings }) {
+function AddTab({ onAdd, recentProducts, onDelete, onEdit, settings}) {
   const today = new Date().toISOString().slice(0, 10)
   const [name,      setName]      = useState('')
   const [date,      setDate]      = useState(today)
@@ -313,7 +451,7 @@ function AddTab({ onAdd, recentProducts, onDelete, settings }) {
         {recentProducts.length === 0
           ? <div className="empty">Inga varor ännu.</div>
           : recentProducts.slice(0, 5).map(p => (
-              <ProductItem key={p.id} product={p} onDelete={onDelete} />
+              <ProductItem key={p.id} product={p} onDelete={onDelete} onEdit={onEdit} />
             ))
         }
       </div>
@@ -632,6 +770,7 @@ export default function App() {
     }
   })
   const [tab, setTab] = useState('overview')
+  const [editingProduct, setEditingProduct] = useState(null)
 
   const [settings, setSettings] = useState(() => {
     try {
@@ -709,6 +848,12 @@ export default function App() {
 
   function cancelDelete() {
     setDeleteModal(null)
+  }
+
+  function editProduct(id, updates) {
+    setProducts(prev =>
+      prev.map(p => p.id === id ? { ...p, ...updates } : p)
+    )
   }
 
   function dismissNotification(id) {
@@ -790,10 +935,18 @@ export default function App() {
 
       <NotificationBanner notifications={notifications} onDismiss={dismissNotification} settings={settings} />
 
+      {editingProduct && (
+        <EditModal
+          product={editingProduct}
+          onSave={editProduct}
+          onClose={() => setEditingProduct(null)}
+        />
+      )}
+
       <main className="app-body">
       {tab === 'overview' && <OverviewTab products={products} />}
-      {tab === 'fridge'   && <FridgeTab   products={products} onDelete={requestDelete} />}
-      {tab === 'add'      && <AddTab      onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} settings={settings} />}
+      {tab === 'fridge'   && <FridgeTab   products={products} onDelete={requestDelete} onEdit={setEditingProduct}  />}
+      {tab === 'add'      && <AddTab      onAdd={addProduct}  recentProducts={products} onDelete={requestDelete} onEdit={setEditingProduct}  settings={settings} />}
       {tab === 'history'  && <HistoryTab  wasteLog={wasteLog} />}
       {tab === 'settings' && <SettingsTab settings={settings} onUpdate={updateSettings} />}
       {tab === 'level'    && <LevelTab    points={points} level={level} onWater={handleWater} pendingWater={pendingWater} treeStarted={treeStarted} onStartTree={handleStartTree} />}
