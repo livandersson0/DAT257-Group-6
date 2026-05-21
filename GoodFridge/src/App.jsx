@@ -913,7 +913,7 @@ export default function App() {
               alt="logo"
               style={{
                 width: 100,
-                height: 170,
+                height: 100,
                 objectFit: 'cover',
                 objectPosition: 'top'
               }}
