@@ -837,7 +837,6 @@ export default function App() {
   function confirmDelete(reason) {
     const { product } = deleteModal
     if (reason === 'wasted') {
-      setWasteLog(prev => [{ ...product, removedAt: new Date().toISOString() }, ...prev])
       addPoints(-10)
     } else if (reason === 'eaten') {
       addPoints(+10)
