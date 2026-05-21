@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { searchProducts } from "./api/products";
 import Logo from './assets/Logo.png'
+import LogoText from './assets/LogoText.png'
 
 import trad1 from './assets/images/level/trad1.png'
 import trad2 from './assets/images/level/trad2.png'
@@ -905,7 +906,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
           <div style={{ width: 100, height: 100, overflow: 'hidden' }}>
             <img
               src={Logo}
@@ -918,7 +919,7 @@ export default function App() {
               }}
             />
           </div>
-          GoodFridge
+          <img src={LogoText} alt="GoodFridge" style={{ height: 100, marginLeft: -16, marginTop:10 }} />
         </div>
         <nav className="nav">
           {TABS.map(t => (
