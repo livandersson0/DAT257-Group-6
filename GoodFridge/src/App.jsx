@@ -27,13 +27,14 @@ function offsetDate(days) {
 function daysLeft(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const exp = new Date(dateStr)
-  exp.setHours(0, 0, 0, 0)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const exp = new Date(y, m - 1, d)
   return Math.round((exp - today) / 86400000)
 }
 
 function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('sv-SE', {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('sv-SE', {
     day: 'numeric',
     month: 'short',
   })
@@ -239,7 +240,7 @@ function OverviewTab({ products }) {
   const week = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
-    const dateStr = d.toISOString().slice(0, 10)
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`    
     const expiring = products.filter(p => p.date === dateStr)
     return { d, dateStr, expiring, isToday: i === 0 }
   })
